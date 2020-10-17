@@ -89,11 +89,10 @@ class _MyHomePageState extends State<MyHomePage> {
 
             double dx = localPosition.dx;
 
-            int currentBar = (width / dx).ceil();
+            int activeBar = (dx / (width / items.length)).floor();
             setState(() {
-              items[currentBar].value += detail.delta.dy;
+              items[activeBar].value += detail.delta.dy;
             });
-            print(currentBar);
           },
           child: CustomPaint(
             size: Size(width, width),
