@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 
 void main() {
@@ -5,25 +7,12 @@ void main() {
 }
 
 class MyApp extends StatelessWidget {
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Flutter Demo',
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // Try running your application with "flutter run". You'll see the
-        // application has a blue toolbar. Then, without quitting the app, try
-        // changing the primarySwatch below to Colors.green and then invoke
-        // "hot reload" (press "r" in the console where you ran "flutter run",
-        // or simply save your changes to "hot reload" in a Flutter IDE).
-        // Notice that the counter didn't reset back to zero; the application
-        // is not restarted.
         primarySwatch: Colors.blue,
-        // This makes the visual density adapt to the platform that you run
-        // the app on. For desktop platforms, the controls will be smaller and
-        // closer together (more dense) than on mobile platforms.
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
       home: MyHomePage(title: 'Flutter Demo Home Page'),
@@ -34,15 +23,6 @@ class MyApp extends StatelessWidget {
 class MyHomePage extends StatefulWidget {
   MyHomePage({Key key, this.title}) : super(key: key);
 
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
   final String title;
 
   @override
@@ -50,68 +30,191 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+  List<DataItem> items = [
+    DataItem(
+      label: "Item 1",
+      value: 35,
+      color: Colors.yellow,
+    ),
+    DataItem(
+      label: "Item 2",
+      value: 30,
+      color: Colors.blue,
+    ),
+    DataItem(
+      label: "Item 3",
+      value: 40,
+      color: Colors.cyan,
+    ),
+    DataItem(
+      label: "Item 4",
+      value: 60,
+      color: Colors.deepOrange,
+    ),
+    DataItem(
+      label: "Item 5",
+      value: 55,
+      color: Colors.pink,
+    ),
+  ];
 
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
+  double getTotal() {
+    double total = 0;
+    items.forEach((i) {
+      total += i.value;
     });
+    return total;
+  }
+
+  double getGreatest() {
+    double value = 0;
+    items.forEach((i) {
+      if (value < i.value) value = i.value;
+    });
+    return value;
   }
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
+    double width = MediaQuery.of(context).size.width;
     return Scaffold(
       appBar: AppBar(
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
         title: Text(widget.title),
       ),
       body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Invoke "debug painting" (press "p" in the console, choose the
-          // "Toggle Debug Paint" action from the Flutter Inspector in Android
-          // Studio, or the "Toggle Debug Paint" command in Visual Studio Code)
-          // to see the wireframe for each widget.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Text(
-              'You have pushed the button this many times:',
+        child: GestureDetector(
+          onPanUpdate: (DragUpdateDetails detail) {
+            double width = MediaQuery.of(context).size.width;
+            Offset localPosition = detail.localPosition;
+
+            double dx = localPosition.dx;
+
+            int currentBar = (width / dx).ceil();
+            setState(() {
+              items[currentBar].value += detail.delta.dy;
+            });
+            print(currentBar);
+          },
+          child: CustomPaint(
+            size: Size(width, width),
+            painter: BargraphPainter(
+              items: items,
+              greatestValue: getGreatest(),
             ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headline4,
-            ),
-          ],
+          ),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
     );
   }
+}
+
+class BargraphPainter extends CustomPainter {
+  final List<DataItem> items;
+  final double greatestValue;
+  double margin = 10;
+
+  BargraphPainter({
+    this.items,
+    this.greatestValue,
+  });
+  Paint painter = Paint()
+    ..strokeCap = StrokeCap.round
+    ..style = PaintingStyle.fill;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    int bars = items.length;
+    double barWidth = size.width / bars;
+
+    double startedAt = 0;
+    items.forEach((item) {
+      double height =
+          (item.value / greatestValue) * size.height; // Calculate this
+      canvas.drawRect(
+        Rect.fromLTWH(
+          startedAt + margin, //OK
+          size.height, //OK
+          barWidth - margin * 2, // OK
+          -height, // OK
+        ),
+        painter..color = item.color,
+      );
+
+      TextPainter textPainter = TextPainter(
+        text: TextSpan(
+          text: item.label,
+          style: TextStyle(color: Colors.black),
+        ),
+        textDirection: TextDirection.ltr,
+      );
+      textPainter
+        ..layout()
+        ..paint(
+          canvas,
+          Offset(
+            startedAt + textPainter.width / 2,
+            size.height - textPainter.height - margin,
+          ),
+        );
+      startedAt += barWidth;
+    });
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+}
+
+class PieChartPainter extends CustomPainter {
+  final List<DataItem> items;
+  final double totalValue;
+
+  PieChartPainter({
+    this.items,
+    this.totalValue,
+  });
+  @override
+  void paint(Canvas canvas, Size size) {
+    Paint paint = Paint()..color = Colors.red;
+    double startingDegree = -pi / 2;
+    // Loop
+    items.forEach((item) {
+      double ratio = item.value / totalValue;
+      double sweepAngle = ratio * (2 * pi);
+      // drawArc
+      canvas.drawArc(
+        Rect.fromLTWH(
+          0,
+          0,
+          size.width,
+          size.height,
+        ), // Rect that includes a circle
+        startingDegree, // starting degree
+        sweepAngle, // degree of the arc
+        true,
+        paint..color = item.color,
+      );
+      startingDegree += sweepAngle;
+    });
+  }
+
+  /// How angle works
+  /// pi => 180 degree
+  /// pi/2 => 90 degree
+  /// + value rotate clock wise
+  /// - value rotate anti clock wise
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+}
+
+class DataItem {
+  final String label;
+  double value;
+  final Color color;
+
+  DataItem({
+    this.label,
+    this.value,
+    this.color,
+  });
 }
